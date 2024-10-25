@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persistent AR Object with Hiro Marker</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.7/aframe/build/aframe-ar.js"></script>
+</head>
+<body>
+    <!-- AR.js scene -->
+    <a-scene embedded arjs>
+        <!-- The Hiro marker -->
+        <a-marker preset="hiro" id="hiroMarker">
+            <!-- 3D model or object to display (for example, a cube) -->
+            <a-box id="persistentObject" position="0 0.5 0" color="red"></a-box>
+        </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        const marker = document.querySelector("#hiroMarker");
+        const object = document.querySelector("#persistentObject");
+
+        // Load the object's saved position and rotation
+        function loadObjectPosition() {
+            const savedData = localStorage.getItem("objectTransform");
+            if (savedData) {
+                const transform = JSON.parse(savedData);
+                object.setAttribute('position', transform.position);
+                object.object3D.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+            }
+        }
+
+        // Save the object's current position and rotation to localStorage
+        function saveObjectPosition() {
+            const position = object.getAttribute('position');
+            const rotation = object.object3D.rotation;
+
+            const transformData = {
+                position: position,
+                rotation: {
+                    x: rotation.x,
+                    y: rotation.y,
+                    z: rotation.z
+                }
+            };
+
+            localStorage.setItem("objectTransform", JSON.stringify(transformData));
+        }
+
+        // Monitor when the marker is detected and when it is lost
+        marker.addEventListener("markerFound", (e) => {
+            console.log("Marker found!");
+            loadObjectPosition();  // Load saved position when the marker is found
+        });
+
+        marker.addEventListener("markerLost", (e) => {
+            console.log("Marker lost!");
+            saveObjectPosition();  // Save position when the marker is lost
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR.js Zoom and Rotate Example</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.7/aframe/build/aframe-ar.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <!-- AR.js scene -->
+    <a-scene embedded arjs>
+        <!-- The custom pattern marker (red square) -->
+        <a-marker type="pattern" url="https://raw.githubusercontent.com/Linke17/arjsdemo/main/pattern-marker.patt" id="customMarker">
+            <!-- Object for the custom marker -->
+            <a-box id="redObject" position="0 0.5 0" color="red" scale="0.5 0.5 0.5"></a-box>
+        </a-marker>
+
+        <!-- The Hiro marker (blue square) -->
+        <a-marker preset="hiro" id="hiroMarker">
+            <!-- Object for the Hiro marker -->
+            <a-box id="blueObject" position="0 0.5 0" color="blue" scale="0.5 0.5 0.5"></a-box>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        const redObject = document.querySelector("#redObject");
+        const blueObject = document.querySelector("#blueObject");
+
+        let isDraggingRed = false;
+        let isDraggingBlue = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let rotationSpeed = 0.5;
+        let zoomSpeed = 0.1;
+
+        // Mouse/touch event listeners for rotation on the red object (custom marker)
+        window.addEventListener("mousedown", (event) => {
+            if (event.target === redObject) {
+                isDraggingRed = true;
+            }
+            previousMousePosition.x = event.clientX;
+            previousMousePosition.y = event.clientY;
+        });
+
+        window.addEventListener("mouseup", () => {
+            isDraggingRed = false;
+            isDraggingBlue = false;
+        });
+
+        window.addEventListener("mousemove", (event) => {
+            if (isDraggingRed) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                previousMousePosition.x = event.clientX;
+                previousMousePosition.y = event.clientY;
+
+                const objectRotation = redObject.getAttribute("rotation");
+                redObject.setAttribute("rotation", {
+                    x: objectRotation.x - deltaY * rotationSpeed,
+                    y: objectRotation.y + deltaX * rotationSpeed,
+                    z: objectRotation.z
+                });
+            } else if (isDraggingBlue) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                previousMousePosition.x = event.clientX;
+                previousMousePosition.y = event.clientY;
+
+                const objectRotation = blueObject.getAttribute("rotation");
+                blueObject.setAttribute("rotation", {
+                    x: objectRotation.x - deltaY * rotationSpeed,
+                    y: objectRotation.y + deltaX * rotationSpeed,
+                    z: objectRotation.z
+                });
+            }
+        });
+
+        // Detect clicks on the blue object (Hiro marker)
+        blueObject.addEventListener("mousedown", (event) => {
+            isDraggingBlue = true;
+            previousMousePosition.x = event.clientX;
+            previousMousePosition.y = event.clientY;
+        });
+
+        // Zoom functionality using mouse wheel or touch (applies to both objects)
+        window.addEventListener("wheel", (event) => {
+            if (isDraggingRed) {
+                const scale = redObject.getAttribute("scale");
+                const zoomFactor = 1 + (event.deltaY > 0 ? -zoomSpeed : zoomSpeed);
+                redObject.setAttribute("scale", {
+                    x: scale.x * zoomFactor,
+                    y: scale.y * zoomFactor,
+                    z: scale.z * zoomFactor
+                });
+            } else if (isDraggingBlue) {
+                const scale = blueObject.getAttribute("scale");
+                const zoomFactor = 1 + (event.deltaY > 0 ? -zoomSpeed : zoomSpeed);
+                blueObject.setAttribute("scale", {
+                    x: scale.x * zoomFactor,
+                    y: scale.y * zoomFactor,
+                    z: scale.z * zoomFactor
+                });
+            }
+        });
+
+        // Touch event listeners for mobile zoom and rotate (pinch and drag) for both objects
+        let initialPinchDistance = null;
+
+        window.addEventListener("touchstart", (event) => {
+            if (event.touches.length === 2) {
+                initialPinchDistance = getPinchDistance(event);
+            }
+        });
+
+        window.addEventListener("touchmove", (event) => {
+            if (event.touches.length === 2 && initialPinchDistance) {
+                const pinchDistance = getPinchDistance(event);
+                if (isDraggingRed) {
+                    const scale = redObject.getAttribute("scale");
+                    const zoomFactor = pinchDistance / initialPinchDistance;
+                    redObject.setAttribute("scale", {
+                        x: scale.x * zoomFactor,
+                        y: scale.y * zoomFactor,
+                        z: scale.z * zoomFactor
+                    });
+                } else if (isDraggingBlue) {
+                    const scale = blueObject.getAttribute("scale");
+                    const zoomFactor = pinchDistance / initialPinchDistance;
+                    blueObject.setAttribute("scale", {
+                        x: scale.x * zoomFactor,
+                        y: scale.y * zoomFactor,
+                        z: scale.z * zoomFactor
+                    });
+                }
+                initialPinchDistance = pinchDistance;
+            } else if (event.touches.length === 1) {
+                const touch = event.touches[0];
+                const deltaX = touch.clientX - previousMousePosition.x;
+                const deltaY = touch.clientY - previousMousePosition.y;
+
+                previousMousePosition.x = touch.clientX;
+                previousMousePosition.y = touch.clientY;
+
+                if (isDraggingRed) {
+                    const objectRotation = redObject.getAttribute("rotation");
+                    redObject.setAttribute("rotation", {
+                        x: objectRotation.x - deltaY * rotationSpeed,
+                        y: objectRotation.y + deltaX * rotationSpeed,
+                        z: objectRotation.z
+                    });
+                } else if (isDraggingBlue) {
+                    const objectRotation = blueObject.getAttribute("rotation");
+                    blueObject.setAttribute("rotation", {
+                        x: objectRotation.x - deltaY * rotationSpeed,
+                        y: objectRotation.y + deltaX * rotationSpeed,
+                        z: objectRotation.z
+                    });
+                }
+            }
+        });
+
+        window.addEventListener("touchend", () => {
+            isDraggingRed = false;
+            isDraggingBlue = false;
+            initialPinchDistance = null;
+        });
+
+        // Utility function to calculate pinch distance between two fingers
+        function getPinchDistance(event) {
+            const dx = event.touches[0].clientX - event.touches[1].clientX;
+            const dy = event.touches[0].clientY - event.touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+    </script>
+</body>
+</html>
