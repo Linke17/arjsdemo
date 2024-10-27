@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR.js Zoom and Rotate Example</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.7/aframe/build/aframe-ar.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <!-- AR.js scene -->
+    <a-scene embedded arjs>
+        <!-- Custom pattern marker with red cube -->
+        <a-marker type="pattern" url="https://raw.githubusercontent.com/Linke17/arjsdemo/main/pattern-marker.patt" id="customMarker">
+            <a-box id="redObject" position="0 0.5 0" rotation="0 0 90" color="red" scale="0.5 0.5 0.5"></a-box>
+            <a-text id="redText" value="I am a red cube" position="0 1.8 0" color="pink" rotation="-90 0 0" visible="true"></a-text>
+        </a-marker>
+
+        <!-- Updated marker with blue cube -->
+        <a-marker type="pattern" url="https://raw.githubusercontent.com/Linke17/arjsdemo/main/CrashPattern.patt" id="crashMarker">
+            <a-box id="blueObject" position="0 0.5 0" rotation="0 0 90" color="blue" scale="0.5 0.5 0.5"></a-box>
+            <a-text id="blueText" value="I am a blue cube" position="0 1.8 0" color="lightblue" rotation="-90 0 0" visible="true"></a-text>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        const redObject = document.querySelector("#redObject");
+        const blueObject = document.querySelector("#blueObject");
+
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        const rotationSpeed = 0.5;
+        const zoomSpeed = 0.1;
+        const updateInterval = 15;
+        let lastUpdateTime = 0;
+
+        // Mouse/touch event listeners for rotation and zoom
+        window.addEventListener("mousedown", (event) => {
+            isDragging = true;
+            previousMousePosition.x = event.clientX;
+            previousMousePosition.y = event.clientY;
+        });
+
+        window.addEventListener("mouseup", () => {
+            isDragging = false;
+        });
+
+        window.addEventListener("mousemove", (event) => {
+            if (isDragging && Date.now() - lastUpdateTime > updateInterval) {
+                handleRotation(event.clientX, event.clientY);
+                lastUpdateTime = Date.now();
+            }
+        });
+
+        // Zoom functionality using mouse wheel
+        window.addEventListener("wheel", (event) => {
+            const zoomFactor = 1 + (event.deltaY > 0 ? -zoomSpeed : zoomSpeed);
+            adjustScale(redObject, zoomFactor);
+            adjustScale(blueObject, zoomFactor);
+        });
+
+        // Touch event listeners for mobile zoom and rotate
+        let initialPinchDistance = null;
+
+        window.addEventListener("touchstart", (event) => {
+            if (event.touches.length === 2) {
+                initialPinchDistance = getPinchDistance(event);
+            }
+        });
+
+        window.addEventListener("touchmove", (event) => {
+            if (event.touches.length === 2 && initialPinchDistance) {
+                handlePinchZoom(event);
+            } else if (event.touches.length === 1 && Date.now() - lastUpdateTime > updateInterval) {
+                handleRotation(event.touches[0].clientX, event.touches[0].clientY);
+                lastUpdateTime = Date.now();
+            }
+        });
+
+        window.addEventListener("touchend", () => {
+            isDragging = false;
+            initialPinchDistance = null;
+        });
+
+        function handleRotation(currentX, currentY) {
+            const deltaX = currentX - previousMousePosition.x;
+            const deltaY = currentY - previousMousePosition.y;
+
+            previousMousePosition.x = currentX;
+            previousMousePosition.y = currentY;
+
+            rotateObject(redObject, deltaX, deltaY);
+            rotateObject(blueObject, deltaX, deltaY);
+        }
+
+        function rotateObject(object, deltaX, deltaY) {
+            const rotation = object.getAttribute("rotation");
+            object.setAttribute("rotation", {
+                x: rotation.x - deltaY * rotationSpeed,
+                y: rotation.y + deltaX * rotationSpeed,
+                z: rotation.z
+            });
+        }
+
+        function adjustScale(object, zoomFactor) {
+            const scale = object.getAttribute("scale");
+            object.setAttribute("scale", {
+                x: scale.x * zoomFactor,
+                y: scale.y * zoomFactor,
+                z: scale.z * zoomFactor
+            });
+        }
+
+        function handlePinchZoom(event) {
+            const pinchDistance = getPinchDistance(event);
+            const zoomFactor = pinchDistance / initialPinchDistance;
+
+            adjustScale(redObject, zoomFactor);
+            adjustScale(blueObject, zoomFactor);
+
+            initialPinchDistance = pinchDistance;
+        }
+
+        function getPinchDistance(event) {
+            const dx = event.touches[0].clientX - event.touches[1].clientX;
+            const dy = event.touches[0].clientY - event.touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+    </script>
+</body>
+</html>
